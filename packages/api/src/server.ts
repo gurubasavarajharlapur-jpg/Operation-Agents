@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import type { PgBoss } from 'pg-boss';
+import { approvalRoutes } from './routes/approvals.ts';
 import { auditRoutes } from './routes/audit.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
 
@@ -38,5 +39,6 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
   app.register(webhookRoutes, deps);
   app.register(auditRoutes, deps);
+  app.register(approvalRoutes, deps); // all routes in this plugin require an operator token
   return app;
 }

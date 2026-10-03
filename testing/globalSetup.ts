@@ -16,7 +16,11 @@ export default async function setup() {
   await admin.end();
 
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-  const env = { ...process.env, DATABASE_URL: testDatabaseUrl() };
+  const env = {
+    ...process.env,
+    DATABASE_URL: testDatabaseUrl(),
+    WORKER_DATABASE_URL: process.env.WORKER_DATABASE_URL ?? 'postgres://ops_worker:ops_worker_dev@localhost:5432/operation_agents',
+  };
   for (const script of ['packages/db/src/migrate.ts', 'packages/db/src/seed.ts']) {
     execFileSync('npx', ['tsx', script], { cwd: repoRoot, env, stdio: 'pipe' });
   }

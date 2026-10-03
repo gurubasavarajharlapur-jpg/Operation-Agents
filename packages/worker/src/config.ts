@@ -20,7 +20,8 @@ function resolveMode(): AgentMode {
 }
 
 export const config = {
-  databaseUrl: process.env.DATABASE_URL ?? 'postgres://ops:ops@localhost:5432/operation_agents',
+  // The restricted ops_worker user: it cannot approve payments (migration 005).
+  databaseUrl: process.env.WORKER_DATABASE_URL ?? 'postgres://ops_worker:ops_worker_dev@localhost:5432/operation_agents',
   agentMode: resolveMode(),
   model: process.env.AGENT_MODEL ?? 'claude-opus-5-5',
   effort: (process.env.AGENT_EFFORT ?? 'medium') as Effort,

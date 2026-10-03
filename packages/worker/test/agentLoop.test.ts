@@ -4,14 +4,15 @@ import { verifyAuditChain } from '@oa/db';
 import { runLlmAgent } from '../src/agent/loop.ts';
 import { SYSTEM_PROMPT } from '../src/agent/prompt.ts';
 import { TOOL_DEFINITIONS } from '../src/agent/tools.ts';
-import { TODAY, V, approvalsFor, auditActions, createCase, createTestPool, getCase, invoice, reply, scriptedClaude, text, toolUse } from './helpers.ts';
+import { TODAY, V, approvalsFor, auditActions, createCase, createTestPool, createWorkerPool, getCase, invoice, reply, scriptedClaude, text, toolUse } from './helpers.ts';
 
-let pool: pg.Pool;
-beforeAll(() => { pool = createTestPool(); });
-afterAll(async () => { await pool.end(); });
+let pool: pg.Pool; // admin: fixtures and assertions
+let workerPool: pg.Pool; // ops_worker: the code under test
+beforeAll(() => { pool = createTestPool(); workerPool = createWorkerPool(); });
+afterAll(async () => { await pool.end(); await workerPool.end(); });
 
 const run = (createMessage: Parameters<typeof runLlmAgent>[0]['createMessage'], caseId: string, maxTurns = 8) =>
-  runLlmAgent({ pool, createMessage, model: 'claude-opus-5-5', effort: 'medium', maxTurns, today: TODAY }, caseId);
+  runLlmAgent({ pool: workerPool, createMessage, model: 'claude-opus-5-5', effort: 'medium', maxTurns, today: TODAY }, caseId);
 
 describe('Claude agent loop (scripted fake Claude, no API calls)', () => {
   it('runs tools, then proposes payment; every step is audited with tokens and cost', async () => {

@@ -14,3 +14,10 @@ export function testDatabaseUrl(): string {
   url.pathname = '/operation_agents_test';
   return url.toString();
 }
+
+// The restricted worker user (migration 005), on the test database.
+export function testWorkerDatabaseUrl(): string {
+  const url = new URL(process.env.WORKER_DATABASE_URL ?? 'postgres://ops_worker:ops_worker_dev@localhost:5432/operation_agents');
+  url.pathname = '/operation_agents_test';
+  return url.toString();
+}

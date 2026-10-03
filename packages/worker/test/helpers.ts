@@ -3,7 +3,7 @@ import type Anthropic from '@anthropic-ai/sdk';
 import pg from 'pg';
 import type { InvoicePayload } from '@oa/shared';
 import type { CreateMessage } from '../src/llm.ts';
-import { testDatabaseUrl } from '../../../testing/testDb.ts';
+import { testDatabaseUrl, testWorkerDatabaseUrl } from '../../../testing/testDb.ts';
 
 export const TODAY = '2026-10-03';
 
@@ -17,7 +17,10 @@ export const V = {
   nova: 'a1000000-0000-4000-8000-000000000010', // pending
 };
 
+// admin: sets up fixtures and checks results. worker: runs the code under test, as the restricted
+// ops_worker user the real worker uses, so tests prove the worker needs no more permissions.
 export const createTestPool = () => new pg.Pool({ connectionString: testDatabaseUrl(), max: 10 });
+export const createWorkerPool = () => new pg.Pool({ connectionString: testWorkerDatabaseUrl(), max: 10 });
 
 /** A complete, valid invoice against PO-1001 (Northwind, 1250.00 GBP, open). Override per test. */
 export function invoice(overrides: Partial<InvoicePayload> = {}): InvoicePayload {

@@ -2,14 +2,15 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type pg from 'pg';
 import { verifyAuditChain } from '@oa/db';
 import { processCase, type WorkerDeps } from '../src/processCase.ts';
-import { TODAY, approvalsFor, auditActions, createCase, createTestPool, getCase, invoice, reply, scriptedClaude, toolUse } from './helpers.ts';
+import { TODAY, approvalsFor, auditActions, createCase, createTestPool, createWorkerPool, getCase, invoice, reply, scriptedClaude, toolUse } from './helpers.ts';
 
-let pool: pg.Pool;
-beforeAll(() => { pool = createTestPool(); });
-afterAll(async () => { await pool.end(); });
+let pool: pg.Pool; // admin: fixtures and assertions
+let workerPool: pg.Pool; // ops_worker: the code under test
+beforeAll(() => { pool = createTestPool(); workerPool = createWorkerPool(); });
+afterAll(async () => { await pool.end(); await workerPool.end(); });
 
 const deps = (overrides: Partial<WorkerDeps> = {}): WorkerDeps => ({
-  pool, mode: 'rules', model: 'claude-opus-5-5', effort: 'medium', maxTurns: 8, today: TODAY, ...overrides,
+  pool: workerPool, mode: 'rules', model: 'claude-opus-5-5', effort: 'medium', maxTurns: 8, today: TODAY, ...overrides,
 });
 
 describe('processCase (one pg-boss job)', () => {

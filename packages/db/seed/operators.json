@@ -1,0 +1,5 @@
+[
+  { "name": "Priya Shah", "email": "priya.shah@ops.example", "role": "operations" },
+  { "name": "Tom Okafor", "email": "tom.okafor@ops.example", "role": "operations" },
+  { "name": "Elena Varga", "email": "elena.varga@finance.example", "role": "finance_manager" }
+]

@@ -15,8 +15,13 @@ cp .env.example .env      # then set WEBHOOK_SECRET
 npm install
 npm run db:up             # Postgres 16 + pgvector in Docker
 npm run db:migrate        # apply packages/db/migrations/*.sql
-npm run db:seed           # 10 vendors, 20 purchase orders, 5 policy documents
+npm run db:seed           # vendors, POs, policies, and 3 operators (tokens printed once)
 ```
+
+`db:migrate` also installs the job queues and sets the password of the restricted `ops_worker`
+database user from `WORKER_DATABASE_URL`. `db:seed` prints each operator's API token once and saves it to
+the gitignored `.operator-tokens.json` (only hashes are stored in the database). Issue a new token with
+`npm run operator:token -- <email>`.
 
 `npm run db:reset` wipes the database and rebuilds it from scratch.
 
@@ -25,6 +30,9 @@ npm run dev:api                                  # API on http://localhost:3000
 npm run dev:worker                               # agent worker (second terminal)
 npm run send:invoice -- --scenario happy         # happy | missing | mismatch | suspended | unknown | large | fraud
 npm run send:invoice -- --key demo-1             # send twice: second answer is 200 with the same case_id
+TOKEN=$(node -p 'require("./.operator-tokens.json")["priya.shah@ops.example"]')
+curl -H "authorization: Bearer $TOKEN" localhost:3000/approvals                           # approvals inbox
+curl -X POST -H "authorization: Bearer $TOKEN" localhost:3000/approvals/<id>/approve       # or /reject with {"reason": "..."}
 curl localhost:3000/audit/verify                 # recompute the audit hash chain
 npm test                                         # all tests, against a separate operation_agents_test database
 ```
@@ -64,8 +72,8 @@ How duplicates are prevented:
 |---|---|
 | `packages/shared` | Types shared by every package: case states, allowed transitions, invoice payload |
 | `packages/db` | SQL migrations, a small migration runner, seed data and policy documents |
-| `packages/api` | Fastify API: invoice webhook, `GET /audit/verify` (later: approvals, dashboard endpoints) |
-| `packages/worker` | Agent worker: Claude tool-use loop, guardrails, rules-only engine |
+| `packages/api` | Fastify API: invoice webhook, approvals inbox and decisions, `GET /audit/verify` |
+| `packages/worker` | Agent worker: Claude tool-use loop, guardrails, rules-only engine, payment finalizer |
 | `packages/web` | *(step 6)* React dashboard |
 | `packages/evals` | *(Day 2)* labelled cases and eval runner |
 
@@ -104,6 +112,25 @@ for prompt caching (`cache_read_input_tokens` shows whether the prefix was long 
 `search_policy` uses Postgres full-text search by default. With `VOYAGE_API_KEY` set, `npm run db:embed`
 adds Voyage embeddings and it switches to pgvector similarity search.
 
+## The approval gate
+
+The agent can only *propose* a payment. A payment happens only after a human approves it, and that rule
+is enforced in three independent places:
+
+| Layer | Enforcement |
+|---|---|
+| API | `POST /approvals/:id/approve` and `/reject` need an operator's bearer token. Above 10,000 only a `finance_manager` may approve (403 otherwise); a rejection needs a reason. Concurrent clicks: one wins, the rest get 409. |
+| Worker | The `approval.finalize` job re-checks, in the payment's own transaction, that the approval is approved by an **active** operator and that the amount and currency still match the stored invoice. Otherwise the case is escalated and nothing is paid. |
+| Database | `approvals.decided_by` is a foreign key to `operators`. A trigger on `payments` refuses any row whose approval is not approved by an active operator for exactly that amount, whoever runs the INSERT. `payments.approval_id` is UNIQUE (a job delivered twice cannot pay twice), and payments can never be updated or deleted. |
+
+The worker, which runs the agent, connects as a separate Postgres user, `ops_worker`, that **has no UPDATE
+permission on `approvals`** and cannot read operator token hashes. Even a compromised or confused agent
+process cannot approve a payment; only the API can, on behalf of an authenticated person. Every test of the
+worker runs as this restricted user.
+
+Payments are simulated: a row in `payments` with a `SIM-` reference. Operator tokens stand in for real
+login; in production this would be SSO, with the API using its own least-privilege database user too.
+
 ## Audit trail
 
 `audit_events` is append-only (a trigger rejects UPDATE, DELETE and TRUNCATE) and hash-chained:
@@ -113,7 +140,9 @@ head hash; publishing that head hash somewhere external would also catch a fully
 
 ## Tests
 
-`npm test` runs 55 tests against a real Postgres (no API key needed; Claude is replaced by a scripted fake):
+`npm test` runs 74 tests against a real Postgres (no API key needed; Claude is replaced by a scripted fake):
 every policy rule, every guardrail refusal, every stop condition, idempotent webhooks under a 10-way race,
-10 cases each delivered 3 times concurrently (one decision each, no deadlock), and tamper detection on the
-audit chain even when the trigger is bypassed.
+10 cases each delivered 3 times concurrently (one decision each, no deadlock), tamper detection on the
+audit chain even when the trigger is bypassed, the approval API (401/403/409, racing approvers), the
+database refusing unapproved payments whoever inserts them, and one end-to-end test from signed webhook to
+simulated payment.

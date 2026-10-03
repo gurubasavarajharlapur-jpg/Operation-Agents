@@ -1,17 +1,18 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type pg from 'pg';
 import { runRulesAgent } from '../src/agent/rulesAgent.ts';
-import { TODAY, V, approvalsFor, createCase, createTestPool, getCase, invoice } from './helpers.ts';
+import { TODAY, V, approvalsFor, createCase, createTestPool, createWorkerPool, getCase, invoice } from './helpers.ts';
 
-let pool: pg.Pool;
-beforeAll(() => { pool = createTestPool(); });
-afterAll(async () => { await pool.end(); });
+let pool: pg.Pool; // admin: fixtures and assertions
+let workerPool: pg.Pool; // ops_worker: the code under test
+beforeAll(() => { pool = createTestPool(); workerPool = createWorkerPool(); });
+afterAll(async () => { await pool.end(); await workerPool.end(); });
 
 // The rules engine on each seeded scenario. These double as the "expected answer" for
 // clear-cut cases, which the Claude agent must also get right (Day 2 evals).
 async function decide(payload: Parameters<typeof invoice>[0]) {
   const id = await createCase(pool, invoice(payload), 'validating');
-  await runRulesAgent(pool, id, TODAY);
+  await runRulesAgent(workerPool, id, TODAY);
   return { id, ...(await getCase(pool, id)) };
 }
 

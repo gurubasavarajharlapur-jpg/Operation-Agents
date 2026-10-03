@@ -5,10 +5,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { DATABASE_URL } from './env.ts';
+import { hashOperatorToken, newOperatorToken } from './operatorTokens.ts';
+import { saveTokens } from './tokensFile.ts';
 
 const SEED_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../seed');
 
 interface VendorSeed { id: string; name: string; email: string; status: string }
+interface OperatorSeed { name: string; email: string; role: string }
 interface PurchaseOrderSeed { po_number: string; vendor_id: string; amount: number; currency: string; status: string }
 
 async function readJson<T>(file: string): Promise<T> {
@@ -71,7 +74,26 @@ async function seed() {
       chunkCount += chunks.length;
     }
 
+    // Operators get a random token on first seed only. It is printed once and saved to the
+    // gitignored .operator-tokens.json; afterwards only its hash exists (rotate with npm run operator:token).
+    const operators = await readJson<OperatorSeed[]>('operators.json');
+    const newTokens: Record<string, string> = {};
+    for (const op of operators) {
+      const token = newOperatorToken();
+      const inserted = await client.query(
+        `INSERT INTO operators (name, email, role, token_hash) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (email) DO NOTHING RETURNING id`,
+        [op.name, op.email, op.role, hashOperatorToken(token)],
+      );
+      if (inserted.rowCount) newTokens[op.email] = token;
+    }
+
     await client.query('COMMIT');
+    if (Object.keys(newTokens).length > 0) {
+      await saveTokens(newTokens);
+      console.log('new operator tokens (also saved to .operator-tokens.json):');
+      for (const [email, token] of Object.entries(newTokens)) console.log(`  ${email}  ${token}`);
+    }
     console.log(
       `seeded ${vendors.length} vendors, ${pos.length} purchase orders, ` +
         `${policyFiles.length} policy documents (${chunkCount} chunks)`,

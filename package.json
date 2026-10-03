@@ -16,7 +16,8 @@
     "test": "npm test --workspaces --if-present",
     "send:invoice": "tsx packages/api/scripts/send-invoice.ts",
     "db:embed": "npm run embed -w @oa/db",
-    "dev:worker": "npm run dev -w @oa/worker"
+    "dev:worker": "npm run dev -w @oa/worker",
+    "operator:token": "npm run operator:token -w @oa/db"
   },
   "engines": {
     "node": ">=20"

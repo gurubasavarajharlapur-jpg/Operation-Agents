@@ -6,3 +6,5 @@ export * from './policyRules.ts';
 // pg-boss queue names
 export const INVOICE_QUEUE = 'invoice.process';
 export const INVOICE_DEAD_LETTER_QUEUE = 'invoice.dead';
+export const APPROVAL_FINALIZE_QUEUE = 'approval.finalize';
+export const APPROVAL_DEAD_LETTER_QUEUE = 'approval.dead';
