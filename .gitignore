@@ -5,3 +5,5 @@ dist/
 .DS_Store
 coverage/
 .operator-tokens.json
+test-results/
+playwright-report/

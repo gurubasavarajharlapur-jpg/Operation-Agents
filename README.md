@@ -6,6 +6,8 @@ hash-chained audit log. See [PLAN.md](PLAN.md) for the full design and build ord
 
 > Work in progress. The full README (live link, demo, architecture, eval results) comes on Day 2.
 
+![Cases](docs/screenshots/1-cases.png)
+
 ## Run locally
 
 Requires Node 20+ and Docker.
@@ -28,6 +30,7 @@ the gitignored `.operator-tokens.json` (only hashes are stored in the database).
 ```bash
 npm run dev:api                                  # API on http://localhost:3000
 npm run dev:worker                               # agent worker (second terminal)
+npm run dev:web                                  # dashboard on http://localhost:5173 (sign in with an operator token)
 npm run send:invoice -- --scenario happy         # happy | missing | mismatch | suspended | unknown | large | fraud
 npm run send:invoice -- --key demo-1             # send twice: second answer is 200 with the same case_id
 TOKEN=$(node -p 'require("./.operator-tokens.json")["priya.shah@ops.example"]')
@@ -35,6 +38,7 @@ curl -H "authorization: Bearer $TOKEN" localhost:3000/approvals                 
 curl -X POST -H "authorization: Bearer $TOKEN" localhost:3000/approvals/<id>/approve       # or /reject with {"reason": "..."}
 curl localhost:3000/audit/verify                 # recompute the audit hash chain
 npm test                                         # all tests, against a separate operation_agents_test database
+npm run test:e2e                                 # browser tests (Playwright): real API, worker and dashboard
 ```
 
 **Agent modes.** With `ANTHROPIC_API_KEY` set, the worker runs the Claude agent (`AGENT_MODEL`, default
@@ -74,8 +78,30 @@ How duplicates are prevented:
 | `packages/db` | SQL migrations, a small migration runner, seed data and policy documents |
 | `packages/api` | Fastify API: invoice webhook, approvals inbox and decisions, `GET /audit/verify` |
 | `packages/worker` | Agent worker: Claude tool-use loop, guardrails, rules-only engine, payment finalizer |
-| `packages/web` | *(step 6)* React dashboard |
+| `packages/web` | React dashboard: cases, case detail with audit timeline, approvals inbox |
 | `packages/evals` | *(Day 2)* labelled cases and eval runner |
+
+## Dashboard
+
+Sign in with an operator token (printed by `npm run db:seed`). Three pages:
+
+- **Cases**: every invoice with its state, due date (overdue flagged) and who decided it, **Claude** (with
+  the model) or **Rules-only (no LLM)**, plus the Claude cost. Updates live, so you can watch a new invoice
+  move from received to a decision.
+- **Case detail**: the decision and why (exact numbers, policies cited, the drafted vendor email, the
+  policy checks that blocked payment), approve/reject in place, the simulated payment, and the full
+  audit timeline: every Claude call with tokens and cost, every tool call, every guardrail refusal
+  (in red), every human decision, each event linked to the previous one by hash.
+- **Approvals**: the inbox. Approving above 10,000 needs a finance manager; rejecting needs a reason.
+
+The header shows the result of recomputing the whole audit chain, refreshed every 15 seconds.
+
+| Case escalated by policy | Missing information requested | Approvals inbox |
+|---|---|---|
+| ![](docs/screenshots/2-case-escalated.png) | ![](docs/screenshots/3-case-needs-info.png) | ![](docs/screenshots/5-approvals.png) |
+
+These screenshots were taken in rules-only mode (no API key); with Claude, the timeline also shows each
+model turn, its tool calls, tokens and cost.
 
 ## The agent
 
@@ -145,4 +171,5 @@ every policy rule, every guardrail refusal, every stop condition, idempotent web
 10 cases each delivered 3 times concurrently (one decision each, no deadlock), tamper detection on the
 audit chain even when the trigger is bypassed, the approval API (401/403/409, racing approvers), the
 database refusing unapproved payments whoever inserts them, and one end-to-end test from signed webhook to
-simulated payment.
+simulated payment. `npm run test:e2e` adds Playwright browser tests that sign in, follow a case, approve
+and reject payments in the dashboard, and watch the cases complete or escalate.
