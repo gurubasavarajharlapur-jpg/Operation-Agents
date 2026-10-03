@@ -7,6 +7,8 @@ test('a visitor tries the public demo end to end', async ({ page }) => {
   await page.goto('/');
   if (shots) await page.screenshot({ path: `${shots}/demo-sign-in.png` });
   await page.getByRole('button', { name: 'Try as an operations reviewer' }).click();
+  await expect(page.getByTestId('demo-hint')).toBeVisible(); // lands on the Overview
+  await page.getByRole('navigation').getByRole('link', { name: 'Cases' }).click();
 
   await expect(page.getByTestId('demo-banner')).toContainText('payments are simulated');
   await expect(page.getByTestId('demo-banner')).toContainText('rules-only engine');
@@ -50,6 +52,7 @@ test('a simulated outage: retries with backoff, dead letter, then a manual retry
   test.setTimeout(150_000); // 4 real attempts with real backoff (about 5s, 10s, 20s)
   await page.goto('/');
   await page.getByRole('button', { name: 'Try as an operations reviewer' }).click();
+  await page.getByRole('navigation').getByRole('link', { name: 'Cases' }).click();
 
   const panel = page.getByTestId('demo-panel');
   await panel.getByLabel('Send a sample invoice').selectOption('happy');
@@ -72,4 +75,31 @@ test('a simulated outage: retries with backoff, dead letter, then a manual retry
   await page.getByRole('button', { name: 'Retry' }).click();
   await expect(page.getByTestId('state-badge').first()).toHaveText('Awaiting approval', { timeout: 20_000 });
   await expect(page.locator('[data-action="case.retried"]')).toContainText('Retried by Demo operator');
+});
+
+test('the overview counts move with the work, and every number links to the matching cases', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Try as an operations reviewer' }).click();
+  const overview = page.getByTestId('overview');
+  await expect(overview).toBeVisible();
+  const count = async () => Number((await page.getByTestId('tile-cases').locator('.tile-value').innerText()).replace(/,/g, ''));
+  const before = await count();
+
+  await page.getByRole('navigation').getByRole('link', { name: 'Cases' }).click();
+  const panel = page.getByTestId('demo-panel');
+  await panel.getByLabel('Send a sample invoice').selectOption('suspended');
+  await panel.getByRole('button', { name: 'Send invoice' }).click();
+  await expect(page.getByTestId('cases-table').locator('tbody tr').first().getByTestId('state-badge')).toHaveText('Escalated', { timeout: 20_000 });
+
+  await page.getByRole('navigation').getByRole('link', { name: 'Overview' }).click();
+  await expect.poll(count).toBe(before + 1);
+  await expect(page.getByTestId('tile-chain')).toContainText('Intact');
+  if (shots) await page.screenshot({ path: `${shots}/overview.png`, fullPage: true });
+
+  // Click a bar: the case list opens, filtered to that escalation reason
+  await page.getByTestId('categories').getByRole('button', { name: /Vendor not active/ }).click();
+  await expect(page.getByTestId('filter-chip')).toContainText('Vendor not active');
+  const rows = page.getByTestId('cases-table').locator('tbody tr');
+  await expect(rows.first()).toContainText('Sterling Security Systems');
+  for (const row of await rows.all()) await expect(row.getByTestId('state-badge')).toHaveText('Escalated');
 });

@@ -90,3 +90,18 @@ export interface ChainStatus {
   head_hash: string | null;
   broken_at?: { id: string; reason: string };
 }
+
+export interface MoneyByCurrency {
+  currency: string;
+  amount: string;
+}
+
+export interface Overview {
+  total: number;
+  by_state: Record<CaseState, number>;
+  attention: { failed: number; overdue: number; stale: number; open_escalations: number; needs_attention: number; guardrail_refusals_7d: number };
+  escalation_categories: { category: string; n: number }[];
+  awaiting_approval: { count: number; by_currency: MoneyByCurrency[] };
+  money: Record<'proposed' | 'approved' | 'rejected' | 'paid' | 'blocked', MoneyByCurrency[]>;
+  claude: { calls: number; tokens: number; cost_usd: number; cases_by_mode: { llm: number; rules: number }; cost_per_llm_case_usd: number };
+}

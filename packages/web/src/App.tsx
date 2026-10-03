@@ -4,6 +4,7 @@ import { useApi } from './useApi.ts';
 import { ChainStatus } from './components/ChainStatus.tsx';
 import { SignIn } from './pages/SignIn.tsx';
 import { CasesPage } from './pages/CasesPage.tsx';
+import { OverviewPage } from './pages/OverviewPage.tsx';
 import { CaseDetailPage } from './pages/CaseDetailPage.tsx';
 import { ApprovalsPage } from './pages/ApprovalsPage.tsx';
 import type { Stats } from './types.ts';
@@ -20,9 +21,10 @@ function Layout() {
   return (
     <>
       <header className="topbar">
-        <Link to="/cases" className="brand"><span className="brand-mark">OA</span>Operation Agents</Link>
+        <Link to="/overview" className="brand"><span className="brand-mark">OA</span>Operation Agents</Link>
         <nav className="nav">
-          <NavLink to="/cases">Cases</NavLink>
+          <NavLink to="/overview">Overview</NavLink>
+          <NavLink to="/cases" end>Cases</NavLink>
           <NavLink to="/approvals">
             Approvals {stats && stats.pending_approvals > 0 && <span className="count" data-testid="pending-count">{stats.pending_approvals}</span>}
           </NavLink>
@@ -54,11 +56,12 @@ const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
-      { path: '/', element: <Navigate to="/cases" replace /> },
+      { path: '/', element: <Navigate to="/overview" replace /> },
+      { path: '/overview', element: <OverviewPage /> },
       { path: '/cases', element: <CasesPage /> },
       { path: '/cases/:id', element: <CaseDetailPage /> },
       { path: '/approvals', element: <ApprovalsPage /> },
-      { path: '*', element: <Navigate to="/cases" replace /> },
+      { path: '*', element: <Navigate to="/overview" replace /> },
     ],
   },
 ]);

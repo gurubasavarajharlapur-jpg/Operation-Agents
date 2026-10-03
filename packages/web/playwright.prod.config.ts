@@ -9,7 +9,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 // process serving API + worker + dashboard) in public demo mode, against the test database.
 export default defineConfig({
   testDir: './e2e-prod',
-  globalSetup: '../../testing/globalSetup.ts',
+  globalSetup: '../../testing/e2eSetup.ts',
   timeout: 60_000,
   workers: 1,
   use: { baseURL: 'http://localhost:3300', viewport: { width: 1360, height: 900 } },

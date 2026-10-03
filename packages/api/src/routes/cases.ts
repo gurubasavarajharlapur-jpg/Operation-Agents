@@ -5,6 +5,7 @@ import type { PgBoss } from 'pg-boss';
 import { appendAuditEvent } from '@oa/db';
 import { APPROVAL_FINALIZE_QUEUE, CASE_STATES, INVOICE_QUEUE, MAX_ATTEMPTS } from '@oa/shared';
 import { requireOperator } from '../auth.ts';
+import { ATTENTION_SQL, CATEGORY_SQL, type Attention } from './overview.ts';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -57,14 +58,22 @@ export async function caseRoutes(app: FastifyInstance, deps: { pool: pg.Pool; bo
     return { by_state, total: states.rows.reduce((t, r) => t + r.n, 0), pending_approvals: pending.rows[0].n };
   });
 
-  app.get<{ Querystring: { state?: string } }>('/cases', async (request, reply) => {
+  // Filters: ?state=, ?category= (escalation reason), ?attention=failed|overdue|stale. They combine.
+  app.get<{ Querystring: { state?: string; category?: string; attention?: string } }>('/cases', async (request, reply) => {
     const state = request.query.state || null;
+    const category = request.query.category || null;
+    const attention = request.query.attention || null;
     if (state && !(CASE_STATES as readonly string[]).includes(state)) return reply.code(400).send({ error: `unknown state ${state}` });
+    if (attention && !(attention in ATTENTION_SQL)) return reply.code(400).send({ error: `attention must be one of ${Object.keys(ATTENTION_SQL).join(', ')}` });
+    // The attention clause comes from a fixed map above, never from the request text.
+    const attentionSql = attention ? `AND ${ATTENTION_SQL[attention as Attention]}` : '';
     const r = await deps.pool.query(
       `SELECT ${CASE_COLUMNS} FROM cases c ${CASE_JOINS}
        WHERE ($1::text IS NULL OR c.state = $1)
+         AND ($2::text IS NULL OR (c.state = 'escalated' AND ${CATEGORY_SQL} = $2))
+         ${attentionSql}
        ORDER BY c.created_at DESC LIMIT 200`,
-      [state],
+      [state, category],
     );
     return { cases: r.rows, max_attempts: MAX_ATTEMPTS };
   });

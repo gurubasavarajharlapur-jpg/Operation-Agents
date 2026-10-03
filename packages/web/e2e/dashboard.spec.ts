@@ -56,7 +56,9 @@ async function signIn(page: Page, token: string) {
   await page.goto('/');
   await page.getByLabel('Operator token').fill(token);
   await page.getByRole('button', { name: 'Sign in' }).click();
-  await expect(page.getByRole('heading', { name: 'Cases' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible(); // landing page
+  await page.getByRole('navigation').getByRole('link', { name: 'Cases' }).click();
+  await expect(page.getByRole('heading', { name: 'Cases', exact: true })).toBeVisible();
 }
 
 test('sign in, follow a case, approve it, and see it paid', async ({ page }) => {

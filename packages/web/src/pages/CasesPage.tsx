@@ -1,7 +1,7 @@
 import { useNavigate, useSearchParams } from 'react-router';
 import { CASE_STATES, type CaseState } from '@oa/shared';
 import { useApi } from '../useApi.ts';
-import { date, isOverdue, money, relative, usd } from '../format.ts';
+import { categoryLabel, date, isOverdue, money, relative, usd } from '../format.ts';
 import { ModeBadge, StateBadge } from '../components/Badges.tsx';
 import type { CaseSummary, Stats } from '../types.ts';
 import { DemoPanel } from '../components/DemoPanel.tsx';
@@ -16,8 +16,12 @@ export function CasesPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const state = params.get('state') as CaseState | null;
+  const category = params.get('category');
+  const attention = params.get('attention');
+  const query = new URLSearchParams(Object.entries({ state, category, attention }).filter(([, v]) => v) as [string, string][]).toString();
   // Refresh every 3s, so you can watch a new invoice move through the states.
-  const { data, error } = useApi<{ cases: CaseSummary[] }>(`/cases${state ? `?state=${state}` : ''}`, 3000);
+  const { data, error } = useApi<{ cases: CaseSummary[] }>(`/cases${query ? `?${query}` : ''}`, 3000);
+  const ATTENTION_LABEL: Record<string, string> = { failed: 'Failed after all retries', overdue: 'Overdue, not yet paid', stale: 'Waiting for approval over 24h' };
   const { data: stats } = useApi<Stats>('/stats', 3000);
   const demo = useDemo();
 
@@ -32,8 +36,15 @@ export function CasesPage() {
 
       {demo?.enabled && <DemoPanel demo={demo} />}
 
+      {(category || attention) && (
+        <div className="filter-chip" data-testid="filter-chip">
+          <span className="badge violet">Filtered: {category ? `escalated for ${categoryLabel(category)}` : ATTENTION_LABEL[attention!] ?? attention}</span>
+          <button className="btn ghost" onClick={() => setParams({})}>Clear filter ✕</button>
+        </div>
+      )}
+
       <div className="chips" role="tablist">
-        <button className={`chip ${!state ? 'active' : ''}`} onClick={() => setParams({})}>
+        <button className={`chip ${!state && !category && !attention ? 'active' : ''}`} onClick={() => setParams({})}>
           All<span className="n">{stats?.total ?? ''}</span>
         </button>
         {CASE_STATES.map((s) => (

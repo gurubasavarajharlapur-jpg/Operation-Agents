@@ -11,7 +11,7 @@ export const E2E = { apiPort: 3100, webPort: 5174, webhookSecret: 'e2e-secret' }
 
 export default defineConfig({
   testDir: './e2e',
-  globalSetup: '../../testing/globalSetup.ts',
+  globalSetup: '../../testing/e2eSetup.ts',
   timeout: 60_000,
   workers: 1,
   use: { baseURL: `http://localhost:${E2E.webPort}`, viewport: { width: 1360, height: 900 } },

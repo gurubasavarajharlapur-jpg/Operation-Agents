@@ -13,7 +13,7 @@ hash-chained audit log. See [PLAN.md](PLAN.md) for the full design and build ord
 
 > Work in progress. The full README (live link, demo, architecture, eval results) comes on Day 2.
 
-![Cases](docs/screenshots/1-cases.png)
+![Overview](docs/screenshots/0-overview.png)
 
 ## Run locally
 
@@ -101,7 +101,14 @@ the production build in demo mode) on every push.
 
 ## Dashboard
 
-Sign in with an operator token (printed by `npm run db:seed`). Three pages:
+Sign in with an operator token (printed by `npm run db:seed`), or with one click on the public demo. Four pages:
+
+- **Overview** (the landing page): total cases and how many Claude vs rules-only decided; what is awaiting
+  approval and for how much; what **needs attention** (failed after all retries, overdue and unpaid,
+  waiting for approval over 24h); total Claude spend, cost per case and tokens; the audit chain status;
+  cases by state; **why cases were escalated**; and the money proposed, approved, paid (simulated),
+  rejected, and escalated instead of proposed. Every number links to the matching cases, and money is
+  always kept per currency, never added across currencies.
 
 - **Cases**: every invoice with its state, due date (overdue flagged) and who decided it, **Claude** (with
   the model) or **Rules-only (no LLM)**, plus the Claude cost. Updates live, so you can watch a new invoice

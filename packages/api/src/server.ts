@@ -5,6 +5,7 @@ import { approvalRoutes } from './routes/approvals.ts';
 import { auditRoutes } from './routes/audit.ts';
 import { caseRoutes } from './routes/cases.ts';
 import { demoRoutes, type DemoOptions } from './routes/demo.ts';
+import { overviewRoutes } from './routes/overview.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
 
 declare module 'fastify' {
@@ -50,6 +51,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
       api.register(auditRoutes, deps);
       api.register(approvalRoutes, deps); // all routes in these two plugins require an operator token
       api.register(caseRoutes, deps);
+      api.register(overviewRoutes, deps);
       if (deps.demo?.enabled) api.register(demoRoutes, { ...deps, demo: deps.demo, apiPrefix: prefix });
     },
     { prefix },
