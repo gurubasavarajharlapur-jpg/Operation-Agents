@@ -22,6 +22,7 @@ export interface ServerDeps {
   // "prefix": these deps are passed as plugin options, and Fastify reads a "prefix" option as a route prefix.
   apiPrefix?: string;
   demo?: DemoOptions;
+  faultInjection?: boolean; // demo only: lets signed webhook requests simulate worker failures
 }
 
 // Builds the app without starting it, so tests can call it with app.inject() and their own database.

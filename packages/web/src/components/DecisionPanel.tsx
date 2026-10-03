@@ -1,11 +1,12 @@
 import { categoryLabel, date, humanize, money } from '../format.ts';
 import type { CaseDetail } from '../types.ts';
 import { ModeBadge } from './Badges.tsx';
+import { RetryButton } from './RetryButton.tsx';
 
 type Outcome = Record<string, any>;
 
 /** What was decided, why, and what happened next. Reads cases.outcome. */
-export function DecisionPanel({ detail }: { detail: CaseDetail }) {
+export function DecisionPanel({ detail, onChange }: { detail: CaseDetail; onChange: () => void }) {
   const c = detail.case;
   const o: Outcome | null = c.outcome;
 
@@ -24,6 +25,20 @@ export function DecisionPanel({ detail }: { detail: CaseDetail }) {
         <h2 style={{ margin: 0 }}>Decision</h2>
         <ModeBadge mode={o.decided_by_mode ?? c.mode} model={c.model} />
       </div>
+
+      {o.decision === 'failed' && (
+        <>
+          <div className="notice red"><strong>Failed after {o.attempts} attempts</strong> ({o.failed_step === 'payment' ? 'payment step' : 'agent step'}). The job was moved to the dead-letter queue.</div>
+          <p style={{ margin: 0 }}>{o.reason}</p>
+          {o.failed_step === 'payment' && <div className="notice">The approval stands; <strong>no payment was made</strong>. Retrying runs only the payment step again.</div>}
+          {detail.case.state === 'failed' && (
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="muted">Once the cause is fixed, retry with a fresh set of attempts.</span>
+              <RetryButton caseId={detail.case.id} onDone={onChange} />
+            </div>
+          )}
+        </>
+      )}
 
       {o.decision === 'propose_payment' && (
         <>

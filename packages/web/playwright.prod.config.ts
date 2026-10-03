@@ -24,6 +24,7 @@ export default defineConfig({
       WORKER_DB_PASSWORD: decodeURIComponent(new URL(testWorkerDatabaseUrl()).password),
       WEBHOOK_SECRET: 'prod-e2e-secret',
       DEMO_MODE: 'true',
+      ENABLE_FAULT_INJECTION: 'true',
       AGENT_MODE: 'rules',
       PORT: '3300',
       NODE_ENV: 'production',

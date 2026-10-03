@@ -17,6 +17,7 @@ export function CaseDetailPage() {
   const c = data.case;
   const pending = data.approvals.find((a) => a.status === 'pending');
   const refusals = data.events.filter((e) => e.action.startsWith('guardrail.refused')).length;
+  const failedAttempts = data.events.filter((e) => e.action === 'job.attempt_failed').length;
 
   return (
     <div className="page stack">
@@ -27,7 +28,7 @@ export function CaseDetailPage() {
         <div>
           <div className="row" style={{ gap: 10 }}>
             <h1>{c.invoice_number ?? 'Invoice without a number'}</h1>
-            <StateBadge state={c.state} />
+            <StateBadge state={c.state} failedAttempts={c.failed_attempts} />
           </div>
           <p>{c.vendor ?? 'Unknown vendor'} · received {relative(c.created_at)}</p>
         </div>
@@ -40,11 +41,12 @@ export function CaseDetailPage() {
         <div><dt>Due</dt><dd className={isOverdue(c.due_date, c.state) ? 'overdue' : ''}>{date(c.due_date)}</dd></div>
         <div><dt>Claude usage</dt><dd className="num">{c.mode === 'llm' ? `${c.llm_calls} calls · ${c.tokens.toLocaleString()} tok · ${usd(c.cost_usd)}` : 'None (rules-only)'}</dd></div>
         <div><dt>Guardrail refusals</dt><dd className={refusals ? 'overdue' : ''}>{refusals}</dd></div>
+        <div><dt>Failed attempts</dt><dd className={failedAttempts ? 'overdue' : ''}>{failedAttempts}</dd></div>
       </dl>
 
       <div className="grid-2">
         <div className="stack">
-          <DecisionPanel detail={data} />
+          <DecisionPanel detail={data} onChange={reload} />
           {pending && (
             <div className="card card-body">
               <h2>Your decision</h2>

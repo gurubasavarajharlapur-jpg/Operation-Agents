@@ -1,4 +1,4 @@
-import type { CaseState } from '@oa/shared';
+import { MAX_ATTEMPTS, type CaseState } from '@oa/shared';
 
 const STATE_STYLE: Record<CaseState, { label: string; tone: string; pulse?: boolean }> = {
   received: { label: 'Received', tone: 'blue', pulse: true },
@@ -10,7 +10,16 @@ const STATE_STYLE: Record<CaseState, { label: string; tone: string; pulse?: bool
   failed: { label: 'Failed', tone: 'red' },
 };
 
-export function StateBadge({ state }: { state: CaseState }) {
+export function StateBadge({ state, failedAttempts = 0 }: { state: CaseState; failedAttempts?: number }) {
+  // Between attempts the case is still "in progress", but say so honestly.
+  if ((state === 'received' || state === 'validating') && failedAttempts > 0 && failedAttempts < MAX_ATTEMPTS) {
+    return (
+      <span className="badge amber pulse" data-testid="state-badge" title="The last attempt failed; pg-boss will retry with exponential backoff">
+        <span className="dot" />
+        Retrying · attempt {failedAttempts + 1} of {MAX_ATTEMPTS}
+      </span>
+    );
+  }
   const s = STATE_STYLE[state] ?? { label: state, tone: '' };
   return (
     <span className={`badge ${s.tone} ${s.pulse ? 'pulse' : ''}`} data-testid="state-badge">

@@ -17,10 +17,10 @@ export const ALLOWED_TRANSITIONS: Record<CaseState, readonly CaseState[]> = {
   received: ['validating', 'failed'],
   validating: ['needs_info', 'awaiting_approval', 'escalated', 'failed'],
   needs_info: ['validating', 'escalated'], // vendor re-sends info -> re-validate
-  awaiting_approval: ['completed', 'escalated'], // approved -> completed, rejected -> escalated
+  awaiting_approval: ['completed', 'escalated', 'failed'], // approved -> completed, rejected -> escalated, payment step dead-lettered -> failed
   escalated: ['completed'], // a human resolves it
   completed: [],
-  failed: ['received'], // manual retry from the dashboard
+  failed: ['received', 'awaiting_approval'], // manual retry: re-run the agent, or re-run the payment step
 };
 
 export function canTransition(from: CaseState, to: CaseState): boolean {

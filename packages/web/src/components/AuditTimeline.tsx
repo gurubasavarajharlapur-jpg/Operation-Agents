@@ -12,6 +12,7 @@ function describe(e: AuditEvent): { title: string; text?: string; refused?: bool
 
   switch (kind) {
     case 'case':
+      if (name === 'retried') return { title: `Retried by ${output.operator?.name}`, text: `Re-running the ${input.step} step with a fresh set of attempts` };
       return { title: 'Invoice received', text: `Idempotency key ${input.idempotency_key}` };
     case 'webhook':
       return { title: name === 'duplicate_ignored' ? 'Duplicate submission ignored' : 'Same key, different payload: rejected (409)' };
@@ -37,6 +38,8 @@ function describe(e: AuditEvent): { title: string; text?: string; refused?: bool
     case 'payment':
       return { title: 'Payment executed (simulated)', text: `${output.amount} ${output.currency} · ${output.reference}` };
     case 'job':
+      if (name === 'attempt_failed') return { title: `Attempt ${input.attempt} of ${input.max_attempts} failed (${input.step} step)`, text: `${output.error}\n→ ${output.next}`, refused: true };
+      if (name === 'dead_lettered') return { title: 'Moved to the dead-letter queue', text: output.reason, refused: true };
       return { title: 'Job skipped', text: output.reason };
     default:
       return { title: e.action };
@@ -60,7 +63,7 @@ export function AuditTimeline({ events }: { events: AuditEvent[] }) {
         const d = describe(e);
         return (
           <li key={e.id} className={`event ${d.refused ? 'refused' : ''}`} data-action={e.action}>
-            <div className={`event-icon ${e.actor}`} title={e.actor}>{d.refused ? '⛔' : ICON[e.actor]}</div>
+            <div className={`event-icon ${e.actor}`} title={e.actor}>{d.refused ? (e.action.startsWith('job.') ? '⚠︎' : '⛔') : ICON[e.actor]}</div>
             <div style={{ minWidth: 0 }}>
               <div className="event-title">{d.title}</div>
               {d.text && <div className="event-text">{d.text}</div>}

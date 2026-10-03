@@ -25,6 +25,7 @@ export interface CaseSummary {
   llm_calls: number;
   tokens: number;
   cost_usd: number;
+  failed_attempts: number; // since the last manual retry
 }
 
 export interface AuditEvent {

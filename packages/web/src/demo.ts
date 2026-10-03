@@ -6,6 +6,7 @@ export interface DemoInfo {
   agent_mode: 'llm' | 'rules';
   scenarios: { id: string; label: string; expect: string }[];
   limits: { invoices_per_hour: number };
+  fault_injection: boolean;
 }
 
 // GET /api/demo only exists when the server runs with DEMO_MODE=true; anything else means no demo.

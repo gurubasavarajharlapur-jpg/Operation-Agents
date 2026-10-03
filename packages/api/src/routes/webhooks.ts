@@ -10,7 +10,12 @@ interface WebhookDeps {
   pool: pg.Pool;
   boss: PgBoss;
   webhookSecret: string;
+  faultInjection?: boolean;
 }
+
+// Demo only (ENABLE_FAULT_INJECTION=true): a signed request may ask the worker to fail some
+// attempts, to show retries and the dead letter live. Never read from the invoice body.
+const FAULT_MODES = { recovers: 2, never_recovers: 4 } as const;
 
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9._:-]{1,255}$/;
 
@@ -50,6 +55,13 @@ export async function webhookRoutes(app: FastifyInstance, deps: WebhookDeps) {
 
       if (inserted.rows.length === 1) {
         const created = inserted.rows[0];
+        const fault = request.headers['x-simulate-failure'];
+        if (deps.faultInjection && typeof fault === 'string' && fault in FAULT_MODES) {
+          // Same transaction as the case, so the worker can never pick the job up before the fault exists.
+          await client.query('INSERT INTO fault_injections (case_id, mode, failures_remaining) VALUES ($1, $2, $3)', [
+            created.id, fault, FAULT_MODES[fault as keyof typeof FAULT_MODES],
+          ]);
+        }
         await deps.boss.send(
           INVOICE_QUEUE,
           { caseId: created.id },

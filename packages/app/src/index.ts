@@ -16,13 +16,16 @@ const worker = await startWorker();
 const pool = createPool(apiConfig.databaseUrl);
 const boss = await startQueue(apiConfig.databaseUrl, 'api');
 const demoEnabled = process.env.DEMO_MODE === 'true';
+const faultInjection = process.env.ENABLE_FAULT_INJECTION === 'true';
 
 const app = buildServer({
   pool,
   boss,
   webhookSecret: apiConfig.webhookSecret,
   apiPrefix: '/api',
+  faultInjection,
   demo: {
+    faultInjection,
     enabled: demoEnabled,
     agentMode: worker.mode,
     invoicesPerHour: Number(process.env.DEMO_INVOICES_PER_HOUR ?? 60),

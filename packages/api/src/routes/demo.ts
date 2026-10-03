@@ -14,6 +14,7 @@ export interface DemoOptions {
   agentMode: 'llm' | 'rules';
   invoicesPerHour: number;
   signInsPerHour: number;
+  faultInjection?: boolean;
 }
 
 export async function demoRoutes(app: FastifyInstance, deps: { pool: pg.Pool; webhookSecret: string; demo: DemoOptions; apiPrefix: string }) {
@@ -24,6 +25,7 @@ export async function demoRoutes(app: FastifyInstance, deps: { pool: pg.Pool; we
     agent_mode: demo.agentMode,
     scenarios: Object.entries(SCENARIOS).map(([id, s]) => ({ id, label: s.label, expect: s.expect })),
     limits: { invoices_per_hour: demo.invoicesPerHour },
+    fault_injection: Boolean(demo.faultInjection),
   }));
 
   // Each visitor gets their own demo operator, so approvals in the audit trail say who clicked.
@@ -44,17 +46,26 @@ export async function demoRoutes(app: FastifyInstance, deps: { pool: pg.Pool; we
   });
 
   // Sends a sample invoice through the real, signed webhook: the same path a real invoice takes.
-  app.post<{ Body: { scenario?: string } }>('/demo/invoices', { preHandler: requireOperator(pool) }, async (request, reply) => {
+  app.post<{ Body: { scenario?: string; failure?: string } }>('/demo/invoices', { preHandler: requireOperator(pool) }, async (request, reply) => {
     const scenario = SCENARIOS[request.body?.scenario ?? ''];
     if (!scenario) return reply.code(400).send({ error: `scenario must be one of: ${Object.keys(SCENARIOS).join(', ')}` });
     const recent = await pool.query<{ n: number }>("SELECT count(*)::int AS n FROM cases WHERE idempotency_key LIKE 'demo-ui-%' AND created_at > now() - interval '1 hour'");
     if (recent.rows[0].n >= demo.invoicesPerHour) return reply.code(429).send({ error: `Demo limit reached (${demo.invoicesPerHour} invoices per hour). Please try again later.` });
 
+    const failure = request.body?.failure ?? 'none';
+    if (!['none', 'recovers', 'never_recovers'].includes(failure)) return reply.code(400).send({ error: 'failure must be none, recovers or never_recovers' });
+    if (failure !== 'none' && !demo.faultInjection) return reply.code(400).send({ error: 'failure simulation is not enabled on this server' });
+
     const body = JSON.stringify(scenario.invoice());
     const res = await app.inject({
       method: 'POST',
       url: `${deps.apiPrefix}/webhooks/invoice`,
-      headers: { 'content-type': 'application/json', 'idempotency-key': `demo-ui-${crypto.randomUUID()}`, 'x-signature': signBody(body, deps.webhookSecret) },
+      headers: {
+        'content-type': 'application/json',
+        'idempotency-key': `demo-ui-${crypto.randomUUID()}`,
+        'x-signature': signBody(body, deps.webhookSecret),
+        ...(failure !== 'none' ? { 'x-simulate-failure': failure } : {}),
+      },
       payload: body,
     });
     return reply.code(res.statusCode).send(res.json());

@@ -36,7 +36,7 @@ export function CasesPage() {
         <button className={`chip ${!state ? 'active' : ''}`} onClick={() => setParams({})}>
           All<span className="n">{stats?.total ?? ''}</span>
         </button>
-        {CASE_STATES.filter((s) => s !== 'failed' || (stats?.by_state.failed ?? 0) > 0).map((s) => (
+        {CASE_STATES.map((s) => (
           <button key={s} className={`chip ${state === s ? 'active' : ''}`} onClick={() => setParams({ state: s })}>
             {LABELS[s]}<span className="n">{stats?.by_state[s] ?? ''}</span>
           </button>
@@ -72,7 +72,7 @@ export function CasesPage() {
                   </td>
                   <td>{c.vendor ?? <span className="faint">Unknown</span>}</td>
                   <td className="right num">{money(c.amount, c.currency)}</td>
-                  <td><StateBadge state={c.state} /></td>
+                  <td><StateBadge state={c.state} failedAttempts={c.failed_attempts} /></td>
                   <td className={isOverdue(c.due_date, c.state) ? 'overdue' : ''}>
                     {date(c.due_date)}{isOverdue(c.due_date, c.state) && ' · overdue'}
                   </td>

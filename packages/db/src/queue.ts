@@ -1,14 +1,11 @@
 import { PgBoss } from 'pg-boss';
-import { APPROVAL_DEAD_LETTER_QUEUE, APPROVAL_FINALIZE_QUEUE, INVOICE_DEAD_LETTER_QUEUE, INVOICE_QUEUE } from '@oa/shared';
+import { APPROVAL_DEAD_LETTER_QUEUE, APPROVAL_FINALIZE_QUEUE, INVOICE_DEAD_LETTER_QUEUE, INVOICE_QUEUE, RETRY_POLICY } from '@oa/shared';
 
 // pg-boss keeps its jobs in its own "pgboss" schema in the same Postgres database,
 // which is what lets us insert a case (or an approval decision) and its job in one transaction.
 
-const RETRIES = {
-  retryLimit: 3, // after 3 failed retries the job moves to the dead-letter queue (Day 2 surfaces this)
-  retryBackoff: true, // exponential backoff between retries
-  retryDelay: 5, // seconds before the first retry
-};
+// 3 retries with exponential backoff (about 5s, 10s, 20s), then the dead-letter queue.
+const RETRIES = { ...RETRY_POLICY };
 
 /**
  * Installs the pg-boss schema and creates the queues. Run by the migrate script as the admin user,

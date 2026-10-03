@@ -45,3 +45,31 @@ test('a visitor tries the public demo end to end', async ({ page }) => {
   await expect(page.locator('[data-action="approval.approved"]')).toContainText('Approved by Demo finance manager');
   await expect(page.getByTestId('chain-status')).toContainText('Audit chain intact');
 });
+
+test('a simulated outage: retries with backoff, dead letter, then a manual retry succeeds', async ({ page }) => {
+  test.setTimeout(150_000); // 4 real attempts with real backoff (about 5s, 10s, 20s)
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Try as an operations reviewer' }).click();
+
+  const panel = page.getByTestId('demo-panel');
+  await panel.getByLabel('Send a sample invoice').selectOption('happy');
+  await panel.getByLabel('Simulate a failure').selectOption('never_recovers');
+  await panel.getByRole('button', { name: 'Send invoice' }).click();
+  await expect(panel).toContainText('permanent outage');
+
+  const row = page.getByTestId('cases-table').locator('tbody tr').first();
+  await expect(row.getByTestId('state-badge')).toContainText('Retrying · attempt 2 of 4', { timeout: 20_000 });
+  if (shots) await page.screenshot({ path: `${shots}/retrying.png`, fullPage: false });
+  await expect(row.getByTestId('state-badge')).toHaveText('Failed', { timeout: 90_000 });
+
+  await row.click();
+  await expect(page.getByText('Failed after 4 attempts', { exact: true })).toBeVisible();
+  await expect(page.locator('[data-action="job.attempt_failed"]')).toHaveCount(4);
+  await expect(page.locator('[data-action="job.dead_lettered"]')).toBeVisible();
+  if (shots) await page.screenshot({ path: `${shots}/failed.png`, fullPage: true });
+
+  // The outage is over: a manual retry goes through
+  await page.getByRole('button', { name: 'Retry' }).click();
+  await expect(page.getByTestId('state-badge').first()).toHaveText('Awaiting approval', { timeout: 20_000 });
+  await expect(page.locator('[data-action="case.retried"]')).toContainText('Retried by Demo operator');
+});

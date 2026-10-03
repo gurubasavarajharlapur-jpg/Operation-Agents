@@ -175,6 +175,21 @@ worker runs as this restricted user.
 Payments are simulated: a row in `payments` with a `SIM-` reference. Operator tokens stand in for real
 login; in production this would be SSO, with the API using its own least-privilege database user too.
 
+## Failures and retries
+
+Every job (the agent step, and the payment step after an approval) gets **4 attempts**: pg-boss retries
+with exponential backoff (about 5s, 10s, 20s). Each failed attempt is written to the audit trail with the
+error and when the next retry happens, and the case shows *Retrying · attempt 2 of 4*. After the last
+attempt the job moves to a **dead-letter queue**, whose handler marks the case **Failed** with the reason,
+so nothing is ever silently stuck. A failed payment step records that no payment was made (the payment and
+its state change are one transaction). An operator can **Retry** a failed case, which re-runs only the
+step that failed with a fresh set of attempts.
+
+In the public demo, the sample-invoice panel can **simulate an agent outage** (`ENABLE_FAULT_INJECTION`):
+the worker fails on purpose at the point where a real model-API outage would surface, either twice (then
+recovers) or every time (then dead-letters). The retries, backoff, dead letter and audit trail are the real
+mechanism. The simulation is stored per case by the API and is never read from the invoice body.
+
 ## Audit trail
 
 `audit_events` is append-only (a trigger rejects UPDATE, DELETE and TRUNCATE) and hash-chained:

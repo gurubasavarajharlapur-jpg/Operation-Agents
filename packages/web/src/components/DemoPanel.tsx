@@ -5,6 +5,7 @@ import type { DemoInfo } from '../demo.ts';
 /** Demo only: send a sample invoice through the real webhook and watch the agent handle it. */
 export function DemoPanel({ demo }: { demo: DemoInfo }) {
   const [scenario, setScenario] = useState(demo.scenarios[0]?.id ?? 'happy');
+  const [failure, setFailure] = useState('none');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: 'green' | 'red'; text: string } | null>(null);
   const selected = demo.scenarios.find((s) => s.id === scenario);
@@ -13,8 +14,15 @@ export function DemoPanel({ demo }: { demo: DemoInfo }) {
     setBusy(true);
     setMessage(null);
     try {
-      await api('/demo/invoices', { method: 'POST', body: { scenario } });
-      setMessage({ tone: 'green', text: 'Sent. Watch it appear below and move through the states.' });
+      await api('/demo/invoices', { method: 'POST', body: { scenario, failure } });
+      setMessage({
+        tone: 'green',
+        text: failure === 'none'
+          ? 'Sent. Watch it appear below and move through the states.'
+          : failure === 'recovers'
+            ? 'Sent with a simulated outage. Watch two attempts fail and retry with backoff (about 5s, then 10s), then the normal decision.'
+            : 'Sent with a permanent outage. All 4 attempts will fail (about 35 to 45 seconds), then the case becomes Failed. Open it and click Retry.',
+      });
     } catch (err) {
       setMessage({ tone: 'red', text: err instanceof ApiError ? err.message : 'Could not send.' });
     } finally {
@@ -31,6 +39,13 @@ export function DemoPanel({ demo }: { demo: DemoInfo }) {
             <select id="scenario" className="input" style={{ maxWidth: 280 }} value={scenario} onChange={(e) => setScenario(e.target.value)}>
               {demo.scenarios.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
+            {demo.fault_injection && (
+              <select aria-label="Simulate a failure" className="input" style={{ maxWidth: 260 }} value={failure} onChange={(e) => setFailure(e.target.value)}>
+                <option value="none">No failure</option>
+                <option value="recovers">Agent outage, recovers</option>
+                <option value="never_recovers">Agent outage, never recovers</option>
+              </select>
+            )}
             <button className="btn primary" disabled={busy} onClick={send}>Send invoice</button>
           </div>
           {selected && <div className="muted" style={{ fontSize: 13 }}>Expected: {selected.expect}</div>}

@@ -7,6 +7,7 @@ import type { AgentMode, Effort } from './config.ts';
 import type { CreateMessage } from './llm.ts';
 import { runLlmAgent, type AgentRunResult } from './agent/loop.ts';
 import { runRulesAgent } from './agent/rulesAgent.ts';
+import { throwIfFaultInjected } from './faults.ts';
 
 export interface WorkerDeps {
   pool: pg.Pool;
@@ -26,6 +27,7 @@ export async function processCase(deps: WorkerDeps, caseId: string, attempt = 0)
   const mode = await effectiveMode(deps);
   const claimed = await claimCase({ ...deps, mode, budgetFallback: mode !== deps.mode }, caseId, attempt);
   if (claimed !== 'validating') return { status: 'skipped', state: claimed };
+  await throwIfFaultInjected(deps.pool, caseId); // demo "simulate failure"; a no-op otherwise
 
   const result =
     mode === 'llm'

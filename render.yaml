@@ -23,6 +23,8 @@ services:
         generateValue: true
       - key: DEMO_MODE
         value: "true"
+      - key: ENABLE_FAULT_INJECTION # demo only: the "Simulate a failure" option
+        value: "true"
       - key: AGENT_MODE
         value: rules # switch to "auto" and add ANTHROPIC_API_KEY to use the Claude agent
       - key: DAILY_LLM_BUDGET_USD

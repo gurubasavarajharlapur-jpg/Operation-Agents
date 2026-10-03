@@ -2,11 +2,10 @@
 // (on its own) and by the production app (in the same process as the API).
 import pg from 'pg';
 import { startQueue } from '@oa/db';
-import { APPROVAL_FINALIZE_QUEUE, INVOICE_QUEUE } from '@oa/shared';
+import { APPROVAL_DEAD_LETTER_QUEUE, APPROVAL_FINALIZE_QUEUE, INVOICE_DEAD_LETTER_QUEUE, INVOICE_QUEUE } from '@oa/shared';
 import { config } from './config.ts';
 import { anthropicCreateMessage } from './llm.ts';
-import { finalizeApproval } from './finalizeApproval.ts';
-import { processCase } from './processCase.ts';
+import { handleFinalizeDeadLetter, handleInvoiceDeadLetter, runFinalizeJob, runInvoiceJob } from './jobs.ts';
 
 export async function startWorker() {
   const pool = new pg.Pool({ connectionString: config.databaseUrl, max: 10 });
@@ -20,7 +19,7 @@ export async function startWorker() {
   );
 
   await boss.work<{ caseId: string }>(INVOICE_QUEUE, { localConcurrency: config.concurrency }, async ([job]) => {
-    const result = await processCase(
+    const result = await runInvoiceJob(
       {
         pool,
         mode: config.agentMode,
@@ -31,19 +30,29 @@ export async function startWorker() {
         voyageApiKey: config.voyageApiKey,
         dailyLlmBudgetUsd: config.dailyLlmBudgetUsd,
       },
-      job.data.caseId,
-      job.retryCount,
+      job,
     );
     console.log(`case ${job.data.caseId}:`, result.status === 'skipped' ? `skipped (${result.state})` : `${result.state ?? 'decided by another worker'} via ${result.endReason}, ${result.turns} turns, $${result.costUsd.toFixed(4)}`);
     return result; // stored on the pg-boss job as its output
   });
 
   await boss.work<{ approvalId: string }>(APPROVAL_FINALIZE_QUEUE, async ([job]) => {
-    const result = await finalizeApproval(pool, job.data.approvalId);
+    const result = await runFinalizeJob(pool, job);
     console.log(`approval ${job.data.approvalId}:`, result);
     return result;
   });
   // A thrown error fails the job; pg-boss retries it with exponential backoff (see installQueues).
+  // After the last attempt it lands in a dead-letter queue, and the case is marked failed:
+  await boss.work<{ caseId: string }>(INVOICE_DEAD_LETTER_QUEUE, async ([job]) => {
+    const result = await handleInvoiceDeadLetter(pool, job);
+    console.log(`case ${job.data.caseId} dead-lettered:`, result);
+    return result;
+  });
+  await boss.work<{ approvalId: string }>(APPROVAL_DEAD_LETTER_QUEUE, async ([job]) => {
+    const result = await handleFinalizeDeadLetter(pool, job);
+    console.log(`approval ${job.data.approvalId} dead-lettered:`, result);
+    return result;
+  });
 
   return {
     mode: config.agentMode,
