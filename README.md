@@ -2,7 +2,8 @@
 
 [![CI](https://github.com/gurubasavarajharlapur-jpg/operation-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/gurubasavarajharlapur-jpg/operation-agents/actions/workflows/ci.yml)
 
-**Live demo:** *(link added after the first deploy, see [DEPLOY.md](DEPLOY.md))*. No sign-up needed: click
+**Live demo: https://operation-agents.onrender.com** (free hosting: the first visit after a quiet spell
+takes 30 to 60 seconds to wake up). No sign-up needed: click
 **Try as an operations reviewer**, send a sample invoice, and approve or reject the agent's proposals.
 Payments are simulated.
 
