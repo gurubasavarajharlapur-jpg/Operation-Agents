@@ -25,16 +25,17 @@ async function inTransaction(fn: (c: pg.PoolClient) => Promise<void>, commit = t
 
 describe('audit hash chain', () => {
   it('links each event to the previous one and verifies as intact', async () => {
+    // One transaction: the chain lock is held throughout, so no event from a test running in
+    // parallel can land between these two and the link can be checked exactly.
     let first = '';
+    let second = '';
     await inTransaction(async (c) => {
       first = (await appendAuditEvent(c, { caseId: null, actor: 'system', action: 'test.one', input: { a: 1, nested: { z: 1, y: [1, 2] } } })).hash;
-    });
-    await inTransaction(async (c) => {
-      await appendAuditEvent(c, { caseId: null, actor: 'agent', action: 'test.two', output: { ok: true }, tokens: 1234, costUsd: 0.0123456 });
+      second = (await appendAuditEvent(c, { caseId: null, actor: 'agent', action: 'test.two', output: { ok: true }, tokens: 1234, costUsd: 0.0123456 })).hash;
     });
 
-    const second = await pool.query('SELECT prev_hash FROM audit_events ORDER BY id DESC LIMIT 1');
-    expect(second.rows[0].prev_hash).toBe(first);
+    const row = await pool.query('SELECT prev_hash FROM audit_events WHERE hash = $1', [second]);
+    expect(row.rows[0].prev_hash).toBe(first);
     const result = await verifyAuditChain(pool);
     expect(result.intact).toBe(true);
     expect(result.events_checked).toBeGreaterThanOrEqual(2);
