@@ -9,9 +9,13 @@
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "@oa/shared": "^0.1.0"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1"
+  },
+  "exports": {
+    ".": "./src/index.ts"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@oa/api",
+  "name": "@oa/worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,15 +9,15 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p ."
   },
-  "dependencies": {
-    "@oa/shared": "^0.1.0",
-    "fastify": "^5.12.5",
-    "pg": "^8.23.1",
-    "pg-boss": "^12.36.0",
-    "@oa/db": "^0.1.0"
-  },
   "devDependencies": {
     "@types/pg": "^8.23.1",
     "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@oa/db": "^0.1.0",
+    "@oa/shared": "^0.1.0",
+    "pg": "^8.23.1",
+    "pg-boss": "^12.36.0"
   }
 }

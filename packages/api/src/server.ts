@@ -1,6 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import type { PgBoss } from 'pg-boss';
+import { auditRoutes } from './routes/audit.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
 
 declare module 'fastify' {
@@ -36,5 +37,6 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   });
 
   app.register(webhookRoutes, deps);
+  app.register(auditRoutes, deps);
   return app;
 }

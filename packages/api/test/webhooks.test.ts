@@ -77,6 +77,9 @@ describe('POST /webhooks/invoice', () => {
     const row = await pool.query('SELECT state, due_date, payload FROM cases WHERE id = $1', [body.case_id]);
     expect(row.rows[0]).toMatchObject({ state: 'received', due_date: '2026-10-31', payload: invoice });
     expect(await countJobs(body.case_id)).toBe(1);
+
+    const audit = await pool.query('SELECT actor, action FROM audit_events WHERE case_id = $1 ORDER BY id', [body.case_id]);
+    expect(audit.rows).toEqual([{ actor: 'system', action: 'case.received' }]);
   });
 
   it('returns the existing case for a repeated key and does not re-queue it', async () => {
@@ -88,6 +91,9 @@ describe('POST /webhooks/invoice', () => {
     expect(second.json()).toEqual({ case_id: first.case_id, state: 'received', duplicate: true });
     expect(await countCases(key)).toBe(1);
     expect(await countJobs(first.case_id)).toBe(1);
+
+    const audit = await pool.query('SELECT action FROM audit_events WHERE case_id = $1 ORDER BY id', [first.case_id]);
+    expect(audit.rows.map((r) => r.action)).toEqual(['case.received', 'webhook.duplicate_ignored']);
   });
 
   it('treats the same JSON with different key order and whitespace as the same payload', async () => {
@@ -171,6 +177,13 @@ describe('POST /webhooks/invoice', () => {
     // The sender can safely retry with the same key once the queue is back.
     const retry = await post(invoice, key);
     expect(retry.statusCode).toBe(202);
+  });
+
+  it('GET /audit/verify reports an intact chain', async () => {
+    await post(invoice, newKey());
+    const res = await app.inject({ method: 'GET', url: '/audit/verify' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ intact: true, head_hash: expect.stringMatching(/^[0-9a-f]{64}$/) });
   });
 
   it('rejects bodies that are not JSON objects (400)', async () => {

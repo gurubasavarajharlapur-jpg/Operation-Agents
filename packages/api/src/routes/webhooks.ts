@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import type { PgBoss } from 'pg-boss';
 import { INVOICE_QUEUE, canonicalJson, type InvoicePayload, type WebhookResponse } from '@oa/shared';
+import { appendAuditEvent } from '@oa/db';
 import { isValidSignature } from '../signature.ts';
 
 interface WebhookDeps {
@@ -57,6 +58,13 @@ export async function webhookRoutes(app: FastifyInstance, deps: WebhookDeps) {
             db: { executeSql: (text, values) => client.query(text, values) }, // same transaction
           },
         );
+        await appendAuditEvent(client, {
+          caseId: created.id,
+          actor: 'system',
+          action: 'case.received',
+          input: { idempotency_key: key, payload_hash: payloadHash },
+          output: { state: created.state, queue: INVOICE_QUEUE },
+        });
         await client.query('COMMIT');
         request.log.info({ caseId: created.id }, 'case created and queued');
         return reply.code(202).send({ case_id: created.id, state: created.state, duplicate: false } satisfies WebhookResponse);
@@ -78,7 +86,18 @@ export async function webhookRoutes(app: FastifyInstance, deps: WebhookDeps) {
       [key],
     );
     const found = existing.rows[0];
-    if (found.payload_hash !== payloadHash) {
+    const conflict = found.payload_hash !== payloadHash;
+    // Record the rejected or ignored resubmission too: the audit trail shows every attempt.
+    await withTransaction(deps.pool, (tx) =>
+      appendAuditEvent(tx, {
+        caseId: found.id,
+        actor: 'system',
+        action: conflict ? 'webhook.idempotency_conflict' : 'webhook.duplicate_ignored',
+        input: { idempotency_key: key, payload_hash: payloadHash },
+        output: { existing_payload_hash: found.payload_hash },
+      }),
+    );
+    if (conflict) {
       return reply.code(409).send({
         error: 'Idempotency-Key was already used with a different payload',
         case_id: found.id,
@@ -86,6 +105,21 @@ export async function webhookRoutes(app: FastifyInstance, deps: WebhookDeps) {
     }
     return reply.code(200).send({ case_id: found.id, state: found.state, duplicate: true } satisfies WebhookResponse);
   });
+}
+
+async function withTransaction<T>(pool: pg.Pool, fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await fn(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 // Store due_date only if it is a real calendar date in YYYY-MM-DD form; otherwise leave it null
