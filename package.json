@@ -20,7 +20,8 @@
     "operator:token": "npm run operator:token -w @oa/db",
     "dev:web": "npm run dev -w @oa/web",
     "test:e2e": "npm run test:e2e -w @oa/web",
-    "build": "npm run build -w @oa/web"
+    "build": "npm run build -w @oa/web",
+    "start:prod": "npm run db:migrate && npm run db:seed && npm start -w @oa/app"
   },
   "engines": {
     "node": ">=20"

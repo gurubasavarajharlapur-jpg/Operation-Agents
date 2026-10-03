@@ -4,6 +4,8 @@ import { useApi } from '../useApi.ts';
 import { date, isOverdue, money, relative, usd } from '../format.ts';
 import { ModeBadge, StateBadge } from '../components/Badges.tsx';
 import type { CaseSummary, Stats } from '../types.ts';
+import { DemoPanel } from '../components/DemoPanel.tsx';
+import { useDemo } from '../demo.ts';
 
 const LABELS: Record<CaseState, string> = {
   received: 'Received', validating: 'Agent working', needs_info: 'Needs info', awaiting_approval: 'Awaiting approval',
@@ -17,6 +19,7 @@ export function CasesPage() {
   // Refresh every 3s, so you can watch a new invoice move through the states.
   const { data, error } = useApi<{ cases: CaseSummary[] }>(`/cases${state ? `?state=${state}` : ''}`, 3000);
   const { data: stats } = useApi<Stats>('/stats', 3000);
+  const demo = useDemo();
 
   return (
     <div className="page">
@@ -26,6 +29,8 @@ export function CasesPage() {
           <p>Every invoice the agent has received, newest first. Updates live.</p>
         </div>
       </div>
+
+      {demo?.enabled && <DemoPanel demo={demo} />}
 
       <div className="chips" role="tablist">
         <button className={`chip ${!state ? 'active' : ''}`} onClick={() => setParams({})}>
@@ -42,7 +47,7 @@ export function CasesPage() {
         {error && <div className="card-body error-text">{error.message}</div>}
         {data && data.cases.length === 0 && (
           <div className="empty">
-            No cases here yet. Send one with <code>npm run send:invoice -- --scenario happy</code>
+            {demo?.enabled ? 'No cases here yet. Send a sample invoice above.' : <>No cases here yet. Send one with <code>npm run send:invoice -- --scenario happy</code></>}
           </div>
         )}
         {data && data.cases.length > 0 && (

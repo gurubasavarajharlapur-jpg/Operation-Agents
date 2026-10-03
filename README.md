@@ -1,5 +1,11 @@
 # Operation Agents: Invoice Operations Agent
 
+[![CI](https://github.com/gurubasavarajharlapur-jpg/operation-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/gurubasavarajharlapur-jpg/operation-agents/actions/workflows/ci.yml)
+
+**Live demo:** *(link added after the first deploy, see [DEPLOY.md](DEPLOY.md))*. No sign-up needed: click
+**Try as an operations reviewer**, send a sample invoice, and approve or reject the agent's proposals.
+Payments are simulated.
+
 An LLM agent that processes vendor invoices end to end: webhook intake, queue, validation, PO matching,
 and a payment proposal that **only a human can approve**, with every step written to an append-only,
 hash-chained audit log. See [PLAN.md](PLAN.md) for the full design and build order.
@@ -80,6 +86,17 @@ How duplicates are prevented:
 | `packages/worker` | Agent worker: Claude tool-use loop, guardrails, rules-only engine, payment finalizer |
 | `packages/web` | React dashboard: cases, case detail with audit timeline, approvals inbox |
 | `packages/evals` | *(Day 2)* labelled cases and eval runner |
+
+## Deployment
+
+One free Render web service runs the API, the worker and the dashboard in a single Node process
+(`npm run start:prod`: migrate, seed, start), against a free Neon Postgres. `render.yaml` describes the
+service; [DEPLOY.md](DEPLOY.md) has the click-by-click steps. In production the API is served under
+`/api` next to the dashboard. `DEMO_MODE=true` adds one-click demo sign-in and a sample-invoice panel,
+with hourly limits, and `DAILY_LLM_BUDGET_USD` caps Claude spend once an API key is added.
+
+GitHub Actions runs the typecheck, all tests against a real Postgres, and the browser tests (including
+the production build in demo mode) on every push.
 
 ## Dashboard
 

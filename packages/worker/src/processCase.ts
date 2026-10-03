@@ -17,16 +17,18 @@ export interface WorkerDeps {
   maxTurns: number;
   voyageApiKey?: string;
   today?: string;
+  dailyLlmBudgetUsd?: number; // when today's Claude spend reaches this, fall back to rules-only
 }
 
 export type ProcessResult = { status: 'skipped'; state: CaseState } | ({ status: 'processed' } & AgentRunResult);
 
 export async function processCase(deps: WorkerDeps, caseId: string, attempt = 0): Promise<ProcessResult> {
-  const claimed = await claimCase(deps, caseId, attempt);
+  const mode = await effectiveMode(deps);
+  const claimed = await claimCase({ ...deps, mode, budgetFallback: mode !== deps.mode }, caseId, attempt);
   if (claimed !== 'validating') return { status: 'skipped', state: claimed };
 
   const result =
-    deps.mode === 'llm'
+    mode === 'llm'
       ? await runLlmAgent(
           {
             pool: deps.pool, createMessage: requireClient(deps), model: deps.model, effort: deps.effort,
@@ -45,7 +47,7 @@ export async function processCase(deps: WorkerDeps, caseId: string, attempt = 0)
  *               so a crashed attempt leaves nothing half-done.)
  * anything else -> already decided; do nothing.
  */
-async function claimCase(deps: WorkerDeps, caseId: string, attempt: number): Promise<CaseState> {
+async function claimCase(deps: WorkerDeps & { budgetFallback?: boolean }, caseId: string, attempt: number): Promise<CaseState> {
   const client = await deps.pool.connect();
   try {
     await client.query('BEGIN');
@@ -53,7 +55,7 @@ async function claimCase(deps: WorkerDeps, caseId: string, attempt: number): Pro
     const row = await client.query<{ state: CaseState }>('SELECT state FROM cases WHERE id = $1 FOR NO KEY UPDATE', [caseId]);
     const state = row.rows[0]?.state;
     if (!state) throw new Error(`case ${caseId} not found`);
-    const run = { mode: deps.mode, model: deps.mode === 'llm' ? deps.model : null, attempt };
+    const run = { mode: deps.mode, model: deps.mode === 'llm' ? deps.model : null, attempt, ...(deps.budgetFallback ? { reason: 'daily Claude budget reached' } : {}) };
 
     if (state === 'received') {
       await client.query("UPDATE cases SET state = 'validating' WHERE id = $1", [caseId]);
@@ -72,6 +74,16 @@ async function claimCase(deps: WorkerDeps, caseId: string, attempt: number): Pro
   } finally {
     client.release();
   }
+}
+
+/** Rules-only once today's Claude spend (UTC day) has reached the budget. Recorded on the case by claimCase. */
+async function effectiveMode(deps: WorkerDeps): Promise<AgentMode> {
+  if (deps.mode !== 'llm' || deps.dailyLlmBudgetUsd === undefined) return deps.mode;
+  const r = await deps.pool.query<{ spent: number }>(
+    `SELECT coalesce(sum(cost_usd), 0)::float AS spent FROM audit_events
+     WHERE action = 'llm.call' AND created_at >= date_trunc('day', now() AT TIME ZONE 'utc') AT TIME ZONE 'utc'`,
+  );
+  return r.rows[0].spent >= deps.dailyLlmBudgetUsd ? 'rules' : 'llm';
 }
 
 function requireClient(deps: WorkerDeps): CreateMessage {

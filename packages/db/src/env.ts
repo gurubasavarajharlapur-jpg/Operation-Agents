@@ -1,3 +1,4 @@
+import { workerDatabaseUrl } from './urls.ts';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,5 +14,4 @@ export const DATABASE_URL =
   process.env.DATABASE_URL ?? 'postgres://ops:ops@localhost:5432/operation_agents';
 
 // The worker connects as the restricted ops_worker role (migration 005).
-export const WORKER_DATABASE_URL =
-  process.env.WORKER_DATABASE_URL ?? 'postgres://ops_worker:ops_worker_dev@localhost:5432/operation_agents';
+export const WORKER_DATABASE_URL = workerDatabaseUrl();

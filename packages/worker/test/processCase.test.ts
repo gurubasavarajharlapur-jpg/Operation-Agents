@@ -62,3 +62,27 @@ describe('processCase (one pg-boss job)', () => {
     expect((await verifyAuditChain(pool)).intact).toBe(true);
   });
 });
+
+describe('daily Claude budget (public demo safety net)', () => {
+  it('falls back to rules-only once today\'s Claude spend reaches the budget', async () => {
+    // Record some Claude spend for today
+    const spendCase = await createCase(pool, invoice(), 'escalated');
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const { appendAuditEvent } = await import('@oa/db');
+      await appendAuditEvent(client, { caseId: spendCase, actor: 'agent', action: 'llm.call', tokens: 1, costUsd: 0.5 });
+      await client.query('COMMIT');
+    } finally {
+      client.release();
+    }
+
+    const id = await createCase(pool, invoice());
+    const claude = { createMessage: async () => { throw new Error('Claude must not be called over budget'); } };
+    const result = await processCase(deps({ mode: 'llm', ...claude, dailyLlmBudgetUsd: 0.25 }), id);
+
+    expect(result).toMatchObject({ status: 'processed', state: 'awaiting_approval', costUsd: 0 });
+    const started = await pool.query("SELECT input FROM audit_events WHERE case_id = $1 AND action = 'agent.started'", [id]);
+    expect(started.rows[0].input).toMatchObject({ mode: 'rules', reason: 'daily Claude budget reached' });
+  });
+});

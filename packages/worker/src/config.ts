@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { workerDatabaseUrl } from '@oa/db';
 
 const rootEnv = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.env');
 try {
@@ -21,11 +22,14 @@ function resolveMode(): AgentMode {
 
 export const config = {
   // The restricted ops_worker user: it cannot approve payments (migration 005).
-  databaseUrl: process.env.WORKER_DATABASE_URL ?? 'postgres://ops_worker:ops_worker_dev@localhost:5432/operation_agents',
+  databaseUrl: workerDatabaseUrl(),
   agentMode: resolveMode(),
   model: process.env.AGENT_MODEL ?? 'claude-opus-5-5',
   effort: (process.env.AGENT_EFFORT ?? 'medium') as Effort,
   maxTurns: Number(process.env.AGENT_MAX_TURNS ?? 8),
   concurrency: Number(process.env.WORKER_CONCURRENCY ?? 2),
   voyageApiKey: process.env.VOYAGE_API_KEY || undefined,
+  // Public demo safety net: once Claude has cost this much today, new cases use the rules-only
+  // engine until midnight UTC. Unset = no cap.
+  dailyLlmBudgetUsd: process.env.DAILY_LLM_BUDGET_USD ? Number(process.env.DAILY_LLM_BUDGET_USD) : undefined,
 };

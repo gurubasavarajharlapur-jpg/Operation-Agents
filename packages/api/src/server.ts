@@ -4,6 +4,7 @@ import type { PgBoss } from 'pg-boss';
 import { approvalRoutes } from './routes/approvals.ts';
 import { auditRoutes } from './routes/audit.ts';
 import { caseRoutes } from './routes/cases.ts';
+import { demoRoutes, type DemoOptions } from './routes/demo.ts';
 import { webhookRoutes } from './routes/webhooks.ts';
 
 declare module 'fastify' {
@@ -17,6 +18,10 @@ export interface ServerDeps {
   boss: PgBoss;
   webhookSecret: string;
   logger?: boolean;
+  // '' in development (Vite strips /api); '/api' in production, next to the dashboard. Not called
+  // "prefix": these deps are passed as plugin options, and Fastify reads a "prefix" option as a route prefix.
+  apiPrefix?: string;
+  demo?: DemoOptions;
 }
 
 // Builds the app without starting it, so tests can call it with app.inject() and their own database.
@@ -33,14 +38,20 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
     }
   });
 
-  app.get('/health', async () => {
-    await deps.pool.query('SELECT 1');
-    return { status: 'ok' };
-  });
-
-  app.register(webhookRoutes, deps);
-  app.register(auditRoutes, deps);
-  app.register(approvalRoutes, deps); // all routes in these two plugins require an operator token
-  app.register(caseRoutes, deps);
+  const prefix = deps.apiPrefix ?? '';
+  app.register(
+    async (api) => {
+      api.get('/health', async () => {
+        await deps.pool.query('SELECT 1');
+        return { status: 'ok' };
+      });
+      api.register(webhookRoutes, deps);
+      api.register(auditRoutes, deps);
+      api.register(approvalRoutes, deps); // all routes in these two plugins require an operator token
+      api.register(caseRoutes, deps);
+      if (deps.demo?.enabled) api.register(demoRoutes, { ...deps, demo: deps.demo, apiPrefix: prefix });
+    },
+    { prefix },
+  );
   return app;
 }

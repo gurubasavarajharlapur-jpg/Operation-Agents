@@ -6,6 +6,7 @@ interface AuthState {
   operator: Operator | null;
   checking: boolean;
   signIn: (token: string) => Promise<void>;
+  demoSignIn: (role: 'operations' | 'finance_manager') => Promise<void>;
   signOut: () => void;
 }
 
@@ -39,7 +40,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOperator(me);
   }, []);
 
-  return <AuthContext.Provider value={{ operator, checking, signIn, signOut }}>{children}</AuthContext.Provider>;
+  const demoSignIn = useCallback(async (role: 'operations' | 'finance_manager') => {
+    const r = await api<{ token: string; operator: Operator }>('/demo/sign-in', { method: 'POST', body: { role }, token: '' });
+    setToken(r.token);
+    setOperator(r.operator);
+  }, []);
+
+  return <AuthContext.Provider value={{ operator, checking, signIn, demoSignIn, signOut }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

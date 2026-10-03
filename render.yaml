@@ -1,0 +1,31 @@
+# Render Blueprint: one free web service running the API, the worker and the dashboard.
+# The database is external (Neon, free): you paste its DIRECT connection string as DATABASE_URL.
+# See DEPLOY.md.
+services:
+  - type: web
+    name: operation-agents
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    autoDeploy: true
+    # tsx (which runs the TypeScript) and vite (which builds the dashboard) are dev dependencies.
+    buildCommand: npm ci --include=dev && npm run build
+    # Migrations and seed are idempotent, so they run on every start.
+    startCommand: npm run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # you are asked for it when you create the Blueprint
+      - key: WEBHOOK_SECRET
+        generateValue: true
+      - key: WORKER_DB_PASSWORD # password of the restricted ops_worker database user
+        generateValue: true
+      - key: DEMO_MODE
+        value: "true"
+      - key: AGENT_MODE
+        value: rules # switch to "auto" and add ANTHROPIC_API_KEY to use the Claude agent
+      - key: DAILY_LLM_BUDGET_USD
+        value: "2" # public demo safety net once Claude is on
+      - key: ANTHROPIC_API_KEY
+        sync: false # optional; leave empty for rules-only

@@ -1,0 +1,16 @@
+{
+  "name": "@oa/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@fastify/static": "^10.1.5",
+    "@oa/api": "^0.1.0",
+    "@oa/db": "^0.1.0",
+    "@oa/worker": "^0.1.0"
+  }
+}

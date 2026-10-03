@@ -7,10 +7,12 @@ import { CasesPage } from './pages/CasesPage.tsx';
 import { CaseDetailPage } from './pages/CaseDetailPage.tsx';
 import { ApprovalsPage } from './pages/ApprovalsPage.tsx';
 import type { Stats } from './types.ts';
+import { useDemo } from './demo.ts';
 
 function Layout() {
   const { operator, checking, signOut } = useAuth();
   const { data: stats } = useApi<Stats>(operator ? '/stats' : null, 5000);
+  const demo = useDemo();
 
   if (checking) return null;
   if (!operator) return <SignIn />;
@@ -37,6 +39,12 @@ function Layout() {
           </div>
         </div>
       </header>
+      {demo?.enabled && (
+        <div className="demo-banner" data-testid="demo-banner">
+          Public demo · sample invoices · <strong>payments are simulated</strong> ·{' '}
+          {demo.agent_mode === 'llm' ? 'decisions by the Claude agent' : 'decisions by the rules-only engine (no LLM in this deployment)'}
+        </div>
+      )}
       <Outlet />
     </>
   );

@@ -17,7 +17,7 @@ export const setUnauthorizedHandler = (fn: () => void) => {
 };
 
 export async function api<T>(path: string, init: { method?: 'GET' | 'POST'; body?: unknown; token?: string } = {}): Promise<T> {
-  const token = init.token ?? getToken();
+  const token = init.token !== undefined ? init.token : getToken();
   const res = await fetch(`/api${path}`, {
     method: init.method ?? 'GET',
     headers: {
@@ -27,7 +27,7 @@ export async function api<T>(path: string, init: { method?: 'GET' | 'POST'; body
     body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
   });
   const body = await res.json().catch(() => ({}));
-  if (res.status === 401 && !init.token) onUnauthorized();
+  if (res.status === 401 && init.token === undefined) onUnauthorized();
   if (!res.ok) throw new ApiError(res.status, (body as { error?: string }).error ?? res.statusText);
   return body as T;
 }

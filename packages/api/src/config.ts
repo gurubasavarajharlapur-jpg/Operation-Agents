@@ -17,7 +17,7 @@ function required(name: string): string {
 
 export const config = {
   databaseUrl: required('DATABASE_URL'),
-  port: Number(process.env.API_PORT ?? 3000),
+  port: Number(process.env.PORT ?? process.env.API_PORT ?? 3000), // PORT is set by hosts like Render
   webhookSecret: required('WEBHOOK_SECRET'),
   isProduction: process.env.NODE_ENV === 'production',
 };
