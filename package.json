@@ -13,7 +13,8 @@
     "db:reset": "docker compose down -v && npm run db:up && npm run db:migrate && npm run db:seed",
     "dev:api": "npm run dev -w @oa/api",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm test -w @oa/api"
+    "test": "npm test -w @oa/api",
+    "send:invoice": "tsx packages/api/scripts/send-invoice.ts"
   },
   "engines": {
     "node": ">=20"
