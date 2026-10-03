@@ -1,0 +1,22 @@
+[
+  { "po_number": "PO-1001", "vendor_id": "a1000000-0000-4000-8000-000000000001", "amount": 1250.00,  "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1002", "vendor_id": "a1000000-0000-4000-8000-000000000001", "amount": 480.50,   "currency": "GBP", "status": "closed" },
+  { "po_number": "PO-1003", "vendor_id": "a1000000-0000-4000-8000-000000000002", "amount": 3600.00,  "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1004", "vendor_id": "a1000000-0000-4000-8000-000000000002", "amount": 14400.00, "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1005", "vendor_id": "a1000000-0000-4000-8000-000000000003", "amount": 8200.00,  "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1006", "vendor_id": "a1000000-0000-4000-8000-000000000003", "amount": 2150.00,  "currency": "GBP", "status": "cancelled" },
+  { "po_number": "PO-1007", "vendor_id": "a1000000-0000-4000-8000-000000000004", "amount": 5975.25,  "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1008", "vendor_id": "a1000000-0000-4000-8000-000000000004", "amount": 61000.00, "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1009", "vendor_id": "a1000000-0000-4000-8000-000000000005", "amount": 12500.00, "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1010", "vendor_id": "a1000000-0000-4000-8000-000000000005", "amount": 950.00,   "currency": "GBP", "status": "closed" },
+  { "po_number": "PO-1011", "vendor_id": "a1000000-0000-4000-8000-000000000006", "amount": 4300.00,  "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1012", "vendor_id": "a1000000-0000-4000-8000-000000000006", "amount": 780.00,   "currency": "USD", "status": "open" },
+  { "po_number": "PO-1013", "vendor_id": "a1000000-0000-4000-8000-000000000007", "amount": 1675.40,  "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1014", "vendor_id": "a1000000-0000-4000-8000-000000000007", "amount": 320.00,   "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1015", "vendor_id": "a1000000-0000-4000-8000-000000000008", "amount": 2240.00,  "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1016", "vendor_id": "a1000000-0000-4000-8000-000000000008", "amount": 615.75,   "currency": "GBP", "status": "closed" },
+  { "po_number": "PO-1017", "vendor_id": "a1000000-0000-4000-8000-000000000009", "amount": 7800.00,  "currency": "GBP", "status": "open" },
+  { "po_number": "PO-1018", "vendor_id": "a1000000-0000-4000-8000-000000000010", "amount": 9900.00,  "currency": "EUR", "status": "open" },
+  { "po_number": "PO-1019", "vendor_id": "a1000000-0000-4000-8000-000000000010", "amount": 2500.00,  "currency": "EUR", "status": "open" },
+  { "po_number": "PO-1020", "vendor_id": "a1000000-0000-4000-8000-000000000006", "amount": 25000.00, "currency": "GBP", "status": "open" }
+]

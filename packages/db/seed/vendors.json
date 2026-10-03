@@ -1,0 +1,12 @@
+[
+  { "id": "a1000000-0000-4000-8000-000000000001", "name": "Northwind Office Supplies Ltd", "email": "accounts@northwind-office.example", "status": "active" },
+  { "id": "a1000000-0000-4000-8000-000000000002", "name": "Brightline Cloud Hosting", "email": "billing@brightline-cloud.example", "status": "active" },
+  { "id": "a1000000-0000-4000-8000-000000000003", "name": "Keystone Facilities Management", "email": "invoices@keystone-fm.example", "status": "active" },
+  { "id": "a1000000-0000-4000-8000-000000000004", "name": "Harbour Logistics plc", "email": "ar@harbour-logistics.example", "status": "active" },
+  { "id": "a1000000-0000-4000-8000-000000000005", "name": "Meridian Legal LLP", "email": "fees@meridian-legal.example", "status": "active" },
+  { "id": "a1000000-0000-4000-8000-000000000006", "name": "Pinecrest IT Services", "email": "finance@pinecrest-it.example", "status": "active" },
+  { "id": "a1000000-0000-4000-8000-000000000007", "name": "Atlas Print & Design", "email": "billing@atlas-print.example", "status": "active" },
+  { "id": "a1000000-0000-4000-8000-000000000008", "name": "Greenfield Catering Co", "email": "accounts@greenfield-catering.example", "status": "active" },
+  { "id": "a1000000-0000-4000-8000-000000000009", "name": "Sterling Security Systems", "email": "ar@sterling-security.example", "status": "suspended" },
+  { "id": "a1000000-0000-4000-8000-000000000010", "name": "Nova Data Analytics GmbH", "email": "rechnung@nova-data.example", "status": "pending" }
+]
