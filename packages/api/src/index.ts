@@ -1,6 +1,6 @@
 import { config } from './config.ts';
 import { createPool } from './db.ts';
-import { startQueue } from './queue.ts';
+import { startQueue } from '@oa/db';
 import { buildServer } from './server.ts';
 
 const pool = createPool(config.databaseUrl);

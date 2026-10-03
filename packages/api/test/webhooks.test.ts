@@ -5,10 +5,10 @@ import type pg from 'pg';
 import type { PgBoss } from 'pg-boss';
 import { INVOICE_QUEUE } from '@oa/shared';
 import { createPool } from '../src/db.ts';
-import { startQueue } from '../src/queue.ts';
+import { startQueue } from '@oa/db';
 import { buildServer } from '../src/server.ts';
 import { signBody } from '../src/signature.ts';
-import { testDatabaseUrl } from './testDb.ts';
+import { testDatabaseUrl } from '../../../testing/testDb.ts';
 
 const SECRET = 'test-secret';
 let pool: pg.Pool;

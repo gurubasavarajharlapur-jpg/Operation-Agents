@@ -126,3 +126,19 @@ export async function verifyAuditChain(db: Queryable, batchSize = 1000): Promise
   }
   return { intact: true, events_checked: checked, head_hash: prevHash };
 }
+
+/** Appends one event in its own short transaction (for events not tied to another write). */
+export async function recordAuditEvent(pool: pg.Pool, event: AuditEventInput): Promise<{ id: string; hash: string }> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await appendAuditEvent(client, event);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}

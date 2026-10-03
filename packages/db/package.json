@@ -6,11 +6,13 @@
   "scripts": {
     "migrate": "tsx src/migrate.ts",
     "seed": "tsx src/seed.ts",
-    "typecheck": "tsc --noEmit -p ."
+    "typecheck": "tsc --noEmit -p .",
+    "embed": "tsx src/embed.ts"
   },
   "dependencies": {
+    "@oa/shared": "^0.1.0",
     "pg": "^8.23.1",
-    "@oa/shared": "^0.1.0"
+    "pg-boss": "^12.36.0"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1"

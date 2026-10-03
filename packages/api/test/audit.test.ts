@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { appendAuditEvent, verifyAuditChain } from '@oa/db';
 import { createPool } from '../src/db.ts';
-import { testDatabaseUrl } from './testDb.ts';
+import { testDatabaseUrl } from '../../../testing/testDb.ts';
 import type pg from 'pg';
 
 let pool: pg.Pool;
