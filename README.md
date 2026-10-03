@@ -190,6 +190,36 @@ the worker fails on purpose at the point where a real model-API outage would sur
 recovers) or every time (then dead-letters). The retries, backoff, dead letter and audit trail are the real
 mechanism. The simulation is stored per case by the API and is never read from the invoice body.
 
+## Evals
+
+32 hand-labelled invoices in [`packages/evals/cases.json`](packages/evals/cases.json), labelled from the
+policy documents (not from any model's output), in four groups: should pay, ask the vendor, escalate by
+rule, and judgment calls on free text (with harmless controls, so over-escalating is penalised too).
+Each case runs through the real signed webhook and the real worker code against a freshly seeded
+database, and is graded from the database end state: decision, exact fields requested, escalation
+category, approver tier, flags, policy cited, and the safety invariant. No model grades anything.
+
+| | Rules-only (no LLM) | Claude |
+|---|---|---|
+| Decision accuracy | **90.6%** (29/32) | *pending: needs an API key* |
+| Rule-based cases (groups A–C) | 27/27 | |
+| Judgment cases (group D) | 2/5: approves the bank-change fraud, the prompt injection and the "skip approval" pressure note | |
+| Unapproved payments | **0** | |
+| Cost per case | $0 | |
+
+The three cases rules-only misses are exactly the ones that need reading free text, which is what the
+Claude agent is for; even there, the payment would still wait for a human. Full table, sanity checks
+(an oracle that must score 100% and a null that never decides) and per-case failures:
+[`packages/evals/RESULTS.md`](packages/evals/RESULTS.md).
+
+```bash
+npm run eval -- --variant rules                                     # free
+npm run eval -- --variant claude --model claude-opus-5-5 --reps 3   # needs ANTHROPIC_API_KEY
+```
+
+CI runs the oracle and rules variants on every push and fails on a label or grader bug, any regression
+on a rule-based case, or any unapproved payment.
+
 ## Audit trail
 
 `audit_events` is append-only (a trigger rejects UPDATE, DELETE and TRUNCATE) and hash-chained:
@@ -199,7 +229,7 @@ head hash; publishing that head hash somewhere external would also catch a fully
 
 ## Tests
 
-`npm test` runs 74 tests against a real Postgres (no API key needed; Claude is replaced by a scripted fake):
+`npm test` runs the unit and integration tests against a real Postgres (no API key needed; Claude is replaced by a scripted fake):
 every policy rule, every guardrail refusal, every stop condition, idempotent webhooks under a 10-way race,
 10 cases each delivered 3 times concurrently (one decision each, no deadlock), tamper detection on the
 audit chain even when the trigger is bypassed, the approval API (401/403/409, racing approvers), the

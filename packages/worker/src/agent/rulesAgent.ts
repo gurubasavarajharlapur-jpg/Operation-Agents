@@ -3,7 +3,7 @@
 // anticipate (odd wording, fraud hints in free text), and costs $0. Used as a fallback when no
 // API key is configured, and as the baseline the Day 2 evals compare Claude against.
 import type pg from 'pg';
-import { applyDecision, categoryFor, type Decision } from './decisions.ts';
+import { applyDecision, categoryFor, paymentFlags, type Decision } from './decisions.ts';
 import { gatherFacts, loadCase, todayUtc } from './facts.ts';
 import { recordAuditEvent } from '@oa/db';
 import type { AgentRunResult } from './loop.ts';
@@ -40,10 +40,12 @@ export async function runRulesAgent(pool: pg.Pool, caseId: string, today = today
     const first = facts.blockers[0];
     decision = { type: 'escalate_to_human', category: categoryFor(first.code), reason: facts.blockers.map((b) => b.message).join('; '), policy_refs: [...new Set(facts.blockers.map((b) => b.policy))] };
   } else {
+    // Overdue or short payment terms are flagged on the proposal (policy 05), so cite it too.
+    const flagged = paymentFlags(caseRow.payload.issue_date, caseRow.payload.due_date, today).length > 0;
     decision = {
       type: 'propose_payment',
       summary: `Invoice matches ${caseRow.payload.po_number} for active vendor ${facts.vendor.name}; all checks passed.`,
-      policy_refs: ['01', '02', '03', '04'],
+      policy_refs: flagged ? ['01', '02', '03', '04', '05'] : ['01', '02', '03', '04'],
     };
   }
 

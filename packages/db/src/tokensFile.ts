@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 const TOKENS_FILE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.operator-tokens.json');
 
 export async function saveTokens(tokens: Record<string, string>) {
+  // Test and eval databases are seeded too; their tokens must never overwrite your dev ones.
+  if (process.env.OPERATOR_TOKENS_FILE === 'off') return;
   let existing: Record<string, string> = {};
   try {
     existing = JSON.parse(await fs.readFile(TOKENS_FILE, 'utf8'));

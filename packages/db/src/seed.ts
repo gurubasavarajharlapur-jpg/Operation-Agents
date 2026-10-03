@@ -91,7 +91,7 @@ async function seed() {
     await client.query('COMMIT');
     if (Object.keys(newTokens).length > 0) {
       await saveTokens(newTokens);
-      console.log('new operator tokens (also saved to .operator-tokens.json):');
+      console.log(process.env.OPERATOR_TOKENS_FILE === 'off' ? 'new operator tokens:' : 'new operator tokens (also saved to .operator-tokens.json):');
       for (const [email, token] of Object.entries(newTokens)) console.log(`  ${email}  ${token}`);
     }
     console.log(

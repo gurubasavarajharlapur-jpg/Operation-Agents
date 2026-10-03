@@ -33,6 +33,10 @@ jobs:
       - run: npm run typecheck
       - run: npm run db:migrate
       - run: npm test
+      - name: Eval suite (free variants; fails on a label/grader bug, a rules regression or any unapproved payment)
+        run: |
+          npm run eval -- --variant oracle --check
+          npm run eval -- --variant rules --check
       - run: npm run build
       - name: Browser tests
         run: |
